@@ -71,6 +71,7 @@
         const faspect = width / height;
         selectionBox.style.width = (faspect > 1 ? height : width)  + 'px';
         selectionBox.style.height = (faspect > 1 ? height : width) + 'px';
+        selectionBox.style.transform = "";
         drawCroppedImage();
       }
       img.src = event.target.result;
@@ -106,8 +107,10 @@ const rightButton = document.getElementById('rightButton');
 topButton.addEventListener('mousedown', function(e) {
     startY = e.clientY;
     startX = e.clientX;
+    makeElementDefault(selectionBox);
     document.addEventListener('mousemove', handleTopMove);
     document.addEventListener('mouseup', function() {
+        makeElementMovable(selectionBox, selectionBox, selectionBox.parentElement);
         document.removeEventListener('mousemove', handleTopMove);
     });
 });
@@ -115,8 +118,10 @@ topButton.addEventListener('mousedown', function(e) {
 bottomButton.addEventListener('mousedown', function(e) {
     startY = e.clientY;
     startX = e.clientX;
+    makeElementDefault(selectionBox);
     document.addEventListener('mousemove', handleBottomMove);
     document.addEventListener('mouseup', function() {
+        makeElementMovable(selectionBox, selectionBox, selectionBox.parentElement);
         document.removeEventListener('mousemove', handleBottomMove);
     });
 });
@@ -124,8 +129,10 @@ bottomButton.addEventListener('mousedown', function(e) {
 leftButton.addEventListener('mousedown', function(e) {
     startY = e.clientY;
     startX = e.clientX;
+    makeElementDefault(selectionBox);
     document.addEventListener('mousemove', handleLeftMove);
     document.addEventListener('mouseup', function() {
+        makeElementMovable(selectionBox, selectionBox, selectionBox.parentElement);
         document.removeEventListener('mousemove', handleLeftMove);
     });
 });
@@ -133,41 +140,116 @@ leftButton.addEventListener('mousedown', function(e) {
 rightButton.addEventListener('mousedown', function(e) {
     startY = e.clientY;
     startX = e.clientX;
+    makeElementDefault(selectionBox);
     document.addEventListener('mousemove', handleRightMove);
     document.addEventListener('mouseup', function() {
+        makeElementMovable(selectionBox, selectionBox, selectionBox.parentElement);
         document.removeEventListener('mousemove', handleRightMove);
     });
 });
+
+function calculateNewSize(diffX, diffY, rect, parentRect, side) {
+    let newHeight, newWidth;
+
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+      switch(side){
+        case 'top': 
+        newHeight = rect.height - diffX;
+        newWidth = rect.width - diffX;
+        break;
+        
+        case 'left': 
+        newHeight = rect.height - diffX;
+        newWidth = rect.width - diffX;
+        break;
+        
+        case 'bottom': 
+        newHeight = rect.height + diffX;
+        newWidth = rect.width + diffX;
+        break;
+        
+        case 'right': 
+        newHeight = rect.height + diffX;
+        newWidth = rect.width + diffX;
+        break;
+      }
+        
+    } else {
+      switch(side){
+        case 'top': 
+        newHeight = rect.height - diffX;
+        newWidth = rect.width - diffX;
+        break;
+        
+        case 'left': 
+        newHeight = rect.height + diffX;
+        newWidth = rect.width + diffX;
+        break;
+        
+        case 'bottom': 
+        newHeight = rect.height + diffX;
+        newWidth = rect.width + diffX;
+        break;
+        
+        case 'right': 
+        newHeight = rect.height - diffX;
+        newWidth = rect.width - diffX;
+        break;
+      }
+    }
+
+    const offsetX = rect.left - parentRect.left;
+    const offsetY = rect.top - parentRect.top;
+
+    const maxAllowedWidth = Math.min(parentRect.width - offsetX, offsetX + rect.width);
+    const maxAllowedHeight = Math.min(parentRect.height - offsetY, offsetY + rect.height);
+
+    const constrainedWidth = Math.min(newWidth, maxAllowedWidth);
+    const constrainedHeight = Math.min(newHeight, maxAllowedHeight);
+
+    if(constrainedHeight == maxAllowedHeight){
+      return { width: maxAllowedHeight, height: maxAllowedHeight };
+    }
+    if(constrainedWidth == maxAllowedWidth){
+      return { width: maxAllowedWidth, height: maxAllowedWidth };
+    }
+
+    return { width: constrainedWidth, height: constrainedHeight };
+}
+
 
 function handleTopMove(e) {
     const diffY = e.clientY - startY;
     const diffX = e.clientX - startX;
     const rect = selectionBox.getBoundingClientRect();
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-        selectionBox.style.height = rect.height - diffX + 'px';
-        selectionBox.style.width = rect.width - diffX + 'px';
+    const parentRect = selectionBox.parentElement.getBoundingClientRect();
+
+    const { width, height } = calculateNewSize(diffX, diffY, rect, parentRect, 'top');
+
+    if (height != rect.height || width != rect.width) {
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
     }
-    else {
-      selectionBox.style.height = rect.height - diffY + 'px';
-      selectionBox.style.width = rect.width - diffY + 'px';
-    }
+
     startY = e.clientY;
     startX = e.clientX;
     drawCroppedImage();
 }
 
+
 function handleBottomMove(e) {
     const diffY = e.clientY - startY;
     const diffX = e.clientX - startX;
     const rect = selectionBox.getBoundingClientRect();
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-        selectionBox.style.height = rect.height + diffX + 'px';
-        selectionBox.style.width = rect.width + diffX + 'px';
+    const parentRect = selectionBox.parentElement.getBoundingClientRect();
+
+    const { width, height } = calculateNewSize(diffX, diffY, rect, parentRect, 'bottom');
+
+    if (height != rect.height || width != rect.width) {
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
     }
-    else {
-      selectionBox.style.height = rect.height + diffY + 'px';
-      selectionBox.style.width = rect.width + diffY + 'px';
-    }
+
     startY = e.clientY;
     startX = e.clientX;
     drawCroppedImage();
@@ -177,14 +259,15 @@ function handleLeftMove(e) {
     const diffY = e.clientY - startY;
     const diffX = e.clientX - startX;
     const rect = selectionBox.getBoundingClientRect();
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-        selectionBox.style.height = rect.height - diffX + 'px';
-        selectionBox.style.width = rect.width - diffX + 'px';
+    const parentRect = selectionBox.parentElement.getBoundingClientRect();
+
+    const { width, height } = calculateNewSize(diffX, diffY, rect, parentRect, 'left');
+
+    if (height != rect.height || width != rect.width) {
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
     }
-    else {
-      selectionBox.style.height = rect.height + diffY + 'px';
-      selectionBox.style.width = rect.width + diffY + 'px';
-    }
+
     startY = e.clientY;
     startX = e.clientX;
     drawCroppedImage();
@@ -194,22 +277,50 @@ function handleRightMove(e) {
     const diffY = e.clientY - startY;
     const diffX = e.clientX - startX;
     const rect = selectionBox.getBoundingClientRect();
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-        selectionBox.style.height = rect.height + diffX + 'px';
-        selectionBox.style.width = rect.width + diffX + 'px';
+    const parentRect = selectionBox.parentElement.getBoundingClientRect();
+
+    const { width, height } = calculateNewSize(diffX, diffY, rect, parentRect, 'right');
+
+    if (height != rect.height || width != rect.width) {
+        selectionBox.style.width = width + 'px';
+        selectionBox.style.height = height + 'px';
     }
-    else {
-      selectionBox.style.height = rect.height - diffY + 'px';
-      selectionBox.style.width = rect.width - diffY + 'px';
-    }
+
     startY = e.clientY;
     startX = e.clientX;
     drawCroppedImage();
 }
 
+function getTranslate(element){
+  let translateX = 0;
+  let translateY = 0;
+  
+  const transform = element.css('transform');
+  if (transform && transform !== 'none') {
+    const matrix = transform.match(/^matrix\((.+)\)$/);
+    if (matrix) {
+      const values = matrix[1].split(',');
+      translateX = parseFloat(values[4], 10);
+      translateY = parseFloat(values[5], 10);
+    }
+  }
+
+  return {'x': translateX, 'y': translateY};
+}
+
+function makeElementDefault(handleSelector){
+  const handle = $(handleSelector);
+
+  handle.off('mousedown');
+  handle.trigger('mouseup');
+  handle.off('mouseup');
+}
+
 function makeElementMovable(elementSelector, handleSelector, containerSelector) {
-    let isDragging = false;
-    let offsetX, offsetY;
+  let isDragging = false;
+    let startX, startY;
+    let translateX = 0;
+    let translateY = 0;
 
     const element = $(elementSelector);
     const handle = $(handleSelector);
@@ -217,28 +328,33 @@ function makeElementMovable(elementSelector, handleSelector, containerSelector) 
 
     handle.on('mousedown', (event) => {
         isDragging = true;
-        offsetX = event.pageX - element.offset().left;
-        offsetY = event.pageY - element.offset().top;
+        startX = event.pageX;
+        startY = event.pageY;
+        const transform = getTranslate(element);
+        translateX = transform.x;
+        translateY = transform.y;
     });
+
 
     $(document).on('mousemove', (event) => {
-      if (isDragging) {
-          const newX = event.pageX - offsetX;
-          const newY = event.pageY - offsetY;
+        if (isDragging) {
+            const diffX = event.pageX - startX;
+            const diffY = event.pageY - startY;
 
-          const containerRect = container[0].getBoundingClientRect();
-          const elementRect = element[0].getBoundingClientRect();
+            const containerRect = container[0].getBoundingClientRect();
+            const elementRect = element[0].getBoundingClientRect();
 
-          const maxX = containerRect.width - elementRect.width;
-          const maxY = containerRect.height - elementRect.height;
+            const maxX = (containerRect.width - elementRect.width) / 2;
+            const maxY = (containerRect.height - elementRect.height) / 2;
 
-          const constrainedX = Math.max(0, Math.min(newX, maxX));
-          const constrainedY = Math.max(0, Math.min(newY, maxY));
+            const constrainedX = Math.max(-maxX, Math.min(translateX + diffX, maxX));
+            const constrainedY = Math.max(-maxY, Math.min(translateY + diffY, maxY));
 
-          element.css({ left: constrainedX, top: constrainedY });
-          drawCroppedImage();
-      }
+            element.css({ transform: `translateX(${constrainedX}px) translateY(${constrainedY}px)` });
+            drawCroppedImage();
+        }
     });
+
 
 
     $(document).on('mouseup', () => {
@@ -251,6 +367,47 @@ function makeElementMovable(elementSelector, handleSelector, containerSelector) 
 saveBtn.addEventListener('click', function(){
   saveCanvasAsImage(croppedCanvas, 'my_image.png');
 });
+
+function doRectanglesIntersect(parentRect, childRect, childTranslateX, childTranslateY) {
+    const parentTopLeft = { x: parentRect.left, y: parentRect.top };
+    const parentTopRight = { x: parentRect.right, y: parentRect.top };
+    const parentBottomLeft = { x: parentRect.left, y: parentRect.bottom };
+    const parentBottomRight = { x: parentRect.right, y: parentRect.bottom };
+
+    const childTopLeft = { x: childRect.left, y: childRect.top };
+    const childTopRight = { x: childRect.right, y: childRect.top };
+    const childBottomLeft = { x: childRect.left, y: childRect.bottom };
+    const childBottomRight = { x: childRect.right, y: childRect.bottom };
+
+    console.log(childTopLeft);
+
+    if (
+        doLinesIntersect(parentTopLeft, parentTopRight, childTopLeft, childTopRight) ||
+        doLinesIntersect(parentTopLeft, parentBottomLeft, childTopLeft, childBottomLeft) ||
+        doLinesIntersect(parentBottomLeft, parentBottomRight, childBottomLeft, childBottomRight) ||
+        doLinesIntersect(parentTopRight, parentBottomRight, childTopRight, childBottomRight)
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+
+function doLinesIntersect(line1Start, line1End, line2Start, line2End) {
+    const denominator = ((line2End.y - line2Start.y) * (line1End.x - line1Start.x)) - ((line2End.x - line2Start.x) * (line1End.y - line1Start.y));
+    const numerator1 = ((line2End.x - line2Start.x) * (line1Start.y - line2Start.y)) - ((line2End.y - line2Start.y) * (line1Start.x - line2Start.x));
+    const numerator2 = ((line1End.x - line1Start.x) * (line1Start.y - line2Start.y)) - ((line1End.y - line1Start.y) * (line1Start.x - line2Start.x));
+
+    if (denominator == 0) {
+        return numerator1 == 0 && numerator2 == 0;
+    }
+
+    const r = numerator1 / denominator;
+    const s = numerator2 / denominator;
+
+    return (r >= 0 && r <= 1) && (s >= 0 && s <= 1);
+}
 
 function saveCanvasAsImage(canvas, filename) {
     const url = canvas.toDataURL(); 
